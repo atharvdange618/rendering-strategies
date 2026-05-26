@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "slug": "what-is-the-virtual-dom",
+    "title": "What is the Virtual DOM?",
+    "excerpt": "A deep dive into the lightweight JavaScript representation of the real DOM and why frameworks like React use it.",
+    "content": "The Virtual DOM is one of those concepts that sounds complicated until you realize it's just a plain JavaScript object that describes what the real DOM should look like. Instead of touching the actual DOM on every state change - which is expensive - you update a cheap in-memory representation first, diff it against the previous one, and only touch the real DOM for what actually changed.",
+    "author": "Atharv Dange",
+    "date": "2026-01-15",
+    "tags": ["javascript", "react", "performance"]
+  },
+  {
+    "id": 2,
+    "slug": "reconciliation-algorithm",
+    "title": "How React's Reconciliation Algorithm Works",
+    "excerpt": "Understanding the diffing process that makes React updates efficient - keys, fiber, and the 5 cases of reconciliation.",
+    "content": "Reconciliation is the process React uses to figure out what changed between two renders. The naive approach - compare every node in the tree - would be O(n³). React's heuristic reduces this to O(n) by making two assumptions: elements of different types produce different trees, and developers can hint at stable identity across renders using keys.",
+    "author": "Atharv Dange",
+    "date": "2026-02-03",
+    "tags": ["react", "algorithms", "internals"]
+  },
+  {
+    "id": 3,
+    "slug": "csr-vs-ssr-tradeoffs",
+    "title": "CSR vs SSR: It's Not Black and White",
+    "excerpt": "The rendering strategy debate is more nuanced than Twitter makes it seem. Here's how to actually think about the tradeoffs.",
+    "content": "Every rendering strategy exists because of a specific tradeoff. CSR gives you a fast server and a dynamic client at the cost of initial load time and SEO. SSR fixes those costs but puts pressure on your server. SSG pre-computes everything for maximum speed but loses freshness. ISR is an attempt to have both freshness and speed, at the cost of complexity. None of these is universally better.",
+    "author": "Atharv Dange",
+    "date": "2026-03-10",
+    "tags": ["architecture", "performance", "ssr"]
+  },
+  {
+    "id": 4,
+    "slug": "javascript-promises-deep-dive",
+    "title": "JavaScript Promises: A Deep Dive",
+    "excerpt": "From callback hell to async/await - understanding promises from the ground up with real analogies.",
+    "content": "A Promise is an object representing the eventual completion or failure of an asynchronous operation. The mental model that clicks for most people: a Promise is like a receipt you get at a restaurant. You don't have your food yet, but you have a guarantee that either you'll get it, or they'll tell you something went wrong.",
+    "author": "Atharv Dange",
+    "date": "2026-04-01",
+    "tags": ["javascript", "async", "fundamentals"]
+  },
+  {
+    "id": 5,
+    "slug": "building-an-oidc-provider",
+    "title": "Building an OIDC Provider from Scratch",
+    "excerpt": "What I learned from implementing a full spec-compliant OpenID Connect Identity Provider in Express + TypeScript.",
+    "content": "Most developers treat auth as a black box - you plug in Auth0 or Clerk and move on. I spent months building Torii, a custom OIDC IdP, specifically to understand what's inside the box. The spec is dense but consistent, and once you understand the core flows - authorization code, token exchange, introspection - everything else falls into place.",
+    "author": "Atharv Dange",
+    "date": "2026-04-20",
+    "tags": ["auth", "oidc", "typescript", "security"]
+  }
+]
