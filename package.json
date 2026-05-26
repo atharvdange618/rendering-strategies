@@ -1,0 +1,19 @@
+{
+  "name": "rendering-strategies",
+  "version": "1.0.0",
+  "description": "A from-first-principles exploration of SSG, SSR, CSR, and ISR - zero frameworks.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "build": "node src/build.js",
+    "build:start": "node src/build.js && node src/server.js"
+  },
+  "keywords": [
+    "SSG",
+    "SSR",
+    "CSR",
+    "ISR"
+  ],
+  "author": "Atharv Dange",
+  "license": "MIT"
+}

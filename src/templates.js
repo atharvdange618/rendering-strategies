@@ -134,7 +134,7 @@ function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
       align-items: center;
       gap: 1rem;
       font-size: 0.8rem;
-      color: #475569;
+      color: #94a3b8;
     }
 
     .tag {
