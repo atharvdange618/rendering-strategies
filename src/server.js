@@ -18,6 +18,7 @@ const path = require("path");
 const { htmlShell, renderHomePage } = require("./templates");
 
 const handleSSG = require("./strategies/ssg");
+const handleSSR = require("./strategies/ssr");
 
 const PORT = 3000;
 
@@ -46,6 +47,10 @@ function router(req, res) {
 
     case "/ssg":
       handleSSG(req, res, posts);
+      break;
+
+    case "/ssr":
+      handleSSR(req, res, posts);
       break;
 
     case "/api/posts":
