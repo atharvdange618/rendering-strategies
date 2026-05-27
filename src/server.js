@@ -48,11 +48,11 @@ function router(req, res) {
       break;
 
     case "/ssg":
-      handleSSG(req, res, posts);
+      handleSSG(req, res);
       break;
 
     case "/ssr":
-      handleSSR(req, res, posts);
+      handleSSR(req, res);
       break;
 
     case "/csr":

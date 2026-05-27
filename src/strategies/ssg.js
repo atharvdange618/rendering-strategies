@@ -19,7 +19,7 @@ const { htmlShell } = require("../templates");
 
 const DIST_PATH = path.join(__dirname, "../../dist/ssg.html");
 
-module.exports = function handleSSG(req, res, posts) {
+module.exports = function handleSSG(req, res) {
   // Try to read the pre-built file.
   fs.readFile(DIST_PATH, "utf-8", (err, html) => {
     if (err) {
