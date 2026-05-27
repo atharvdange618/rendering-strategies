@@ -8,8 +8,7 @@
  *
  * The actual rendering happens in /client/app.js, running in the browser.
  *
- * Notice the function signature: handleCSR(req, res, posts)
- * We receive `posts` from server.js - and we never use it.
+ * Notice the function signature: handleCSR(req, res)
  * That's intentional and worth staring at for a moment.
  * In CSR, the server doesn't need your data to respond to the request.
  * The client fetches it separately, via /api/posts, after the page loads.
