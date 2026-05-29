@@ -1,6 +1,8 @@
 # Web Rendering Strategies From Scratch
 
-A from-first-principles implementation of all four major web rendering strategies (SSG, SSR, CSR, and ISR) built with zero frameworks. This project uses only Node.js's built-in http module to showcase the underlying mechanics of modern web rendering without framework magic.
+A from-first-principles implementation of all five major web rendering strategies (SSG, SSR, CSR, ISR, and PPR) built with zero frameworks. This project uses only Node.js's built-in `http` module to showcase the underlying mechanics of modern web rendering without framework magic.
+
+For a deep-dive walkthrough and analysis, check out the full [Case Study: Web Rendering Strategies](https://tty.atharvdangedev.in/blog/rendering-strategies).
 
 ---
 
@@ -22,42 +24,48 @@ Every rendering strategy answers one fundamental question: **Where and when does
 BUILD TIME          REQUEST TIME
     │                    │
    SSG                  SSR
-    │
-    + STALENESS WINDOW?
-    │
-   ISR
+    │                    │
+   ISR           ONLY THE DYNAMIC HOLES
+    │                    │
+    └─────────┬──────────┘
+              │
+             PPR
+     (both, on the same page,
+      in the same response)
 ```
 
 ---
 
 ## Project Architecture
 
-The core architectural insight is a **shared template layer**. One [templates.js](src/templates.js) file serves all four strategies, but the render functions are invoked at different times and contexts.
+The core architectural insight is a **shared template layer**. One [templates.js](src/templates.js) file serves all strategies, but the render functions are invoked at different times and contexts.
 
 ```text
 rendering-strategies/
 ├── data/
 │   └── posts.json          ← Single source of truth
-├── dist/                   ← SSG and ISR write pre-built static files here
-│   ├── ssg.html
-│   └── isr.html
+├── dist/                   ← Static files generated at build time
+│   ├── ssg.html            ← SSG output
+│   ├── isr.html            ← ISR cache output
+│   └── ppr-shell.html      ← PPR static shell
 ├── client/
 │   └── app.js              ← Client-side script for CSR
 └── src/
     ├── server.js           ← HTTP server and router
-    ├── build.js            ← SSG manual build script
-    ├── templates.js        ← SHARED: HTML templates and post list renderers
-    ├── isr-cache.js        ← ISR caching states, timers, and revalidation logic
+    ├── build.js            ← Build script for static pages (SSG, PPR)
+    ├── templates.js        ← SHARED: HTML templates and page components
+    ├── isr-cache.js        ← ISR cache states and revalidation timers
     └── strategies/
-        ├── ssg.js          ← SSG request handler (reads static files)
-        ├── ssr.js          ← SSR request handler (renders on demand)
-        ├── csr.js          ← CSR request handler (serves empty shell)
-        └── isr.js          ← ISR request handler (state machine)
+        ├── ssg.js          ← SSG request handler
+        ├── ssr.js          ← SSR request handler
+        ├── csr.js          ← CSR request handler
+        ├── isr.js          ← ISR request handler
+        └── ppr.js          ← PPR request handler (chunked streaming)
 ```
 
 ---
 
-## The Four Strategies in Detail
+## The Five Strategies in Detail
 
 ### 1. Static Site Generation (SSG)
 
@@ -93,6 +101,15 @@ rendering-strategies/
   - Cache State & Revalidation: [src/isr-cache.js](src/isr-cache.js)
   - Cache Output: [dist/isr.html](dist/isr.html)
 
+### 5. Partial Pre-Rendering (PPR)
+
+- **Concept:** Combines build-time SSG and request-time SSR. A static shell (complete with skeleton placeholders and layout) is served instantly from disk. While the browser is parsing it, the server fetches dynamic data in parallel and streams the second chunk—an inline script—over the same connection to resolve the placeholders.
+- **Analogy:** Handing the customer a bread basket baked this morning immediately, and starting the stove only for the specific dynamic dish they ordered.
+- **Entry Points:**
+  - Build Script: [src/build.js](src/build.js)
+  - Request Handler: [src/strategies/ppr.js](src/strategies/ppr.js)
+  - Static Shell: [dist/ppr-shell.html](dist/ppr-shell.html)
+
 ---
 
 ## The Timestamp Trick
@@ -103,15 +120,16 @@ To make the differences between strategies visually obvious, every page includes
 2. **SSR:** The timestamp changes to the exact millisecond on every refresh.
 3. **ISR:** The timestamp stays frozen during the revalidation window (e.g., 10 seconds). Refreshing after expiration serves the stale page once, then the next refresh shows the updated timestamp.
 4. **CSR:** Displays two timestamps: when the shell was sent by the server, and when the browser fetched and rendered the client data.
+5. **PPR:** Shows two distinct timestamps in one response: the build-time timestamp on the static layout (frozen), and the request-time timestamp on the trending widget (updates on every request).
 
 ---
 
 ## Getting Started
 
-You only need Node.js. No npm install, no dependencies.
+You only need Node.js. No external dependencies.
 
 ```bash
-# Build SSG + ISR static files, then start the server
+# Build SSG + PPR static files, then start the server
 node src/build.js && node src/server.js
 ```
 
@@ -134,3 +152,4 @@ Visit the following URLs to compare strategies in action:
 - **SSR:** http://localhost:3000/ssr
 - **CSR:** http://localhost:3000/csr
 - **ISR:** http://localhost:3000/isr
+- **PPR:** http://localhost:3000/ppr
