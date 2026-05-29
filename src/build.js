@@ -1,86 +1,94 @@
 /**
- * build.js - Static Site Generator
+ * build.js - Build script for SSG and PPR
  *
- * This script is the ENTIRE SSG implementation. Run it manually:
- *   node src/build.js
+ * Generates two kinds of output files:
  *
- * What it does:
- *   1. Reads posts.json (your data source)
- *   2. Calls renderPostList() to turn that data into an HTML string
- *   3. Wraps it in the full HTML shell
- *   4. Writes the result to dist/ssg.html
+ *   dist/ssg.html       - COMPLETE HTML document (SSG)
+ *   dist/ppr-shell.html - COMPLETE HTML document with static layout & resolver (PPR)
  *
- * After this script finishes, dist/ssg.html is a complete, self-contained
- * HTML file. The server doesn't need Node.js, templates, or data to serve it.
- * It could literally be hosted on a USB stick.
+ * The difference between those two output types is the central architectural
+ * distinction between SSG and PPR:
  *
- * KEY INSIGHT: Notice what this script does NOT do.
- * It does not start a server. It does not listen for requests. It has no
- * concept of "when a user visits". It runs, does its work, and exits.
- * That's the defining characteristic of SSG - it's a build-time process,
- * completely decoupled from the request-response cycle.
+ *   SSG shell  → complete document, served as-is, connection closes immediately
+ *   PPR shell  → complete document, streamed first, connection stays open
+ *                while dynamic data fetches in parallel. The stream finishes
+ *                by appending a dynamic chunk (an inline script that swaps the
+ *                placeholder content) after the closing tags.
  *
- * In the real world, this script would be triggered by your CI/CD pipeline
- * (GitHub Actions, Vercel's build step, Netlify's build command) every time
- * you push new code or new content. The output files go to a CDN.
+ * Both are pre-built from the same data source at the same build time.
+ * Both are served from disk at request time with no per-request rendering.
+ * Unlike older hacks that used a half-open document, our PPR shell is a complete,
+ * valid HTML document that defines the window.__pprResolve contract.
  */
 
 const fs = require("fs");
 const path = require("path");
-const { htmlShell, renderPostList } = require("./templates");
+const { htmlShell, renderPostList, buildPPRShell } = require("./templates");
 
 const DATA_PATH = path.join(__dirname, "../data/posts.json");
 const DIST_DIR = path.join(__dirname, "../dist");
-const OUT_PATH = path.join(DIST_DIR, "ssg.html");
+const SSG_OUT_PATH = path.join(DIST_DIR, "ssg.html");
+const PPR_SHELL_PATH = path.join(DIST_DIR, "ppr-shell.html");
 
 function build() {
-  console.log("Building static site...\n");
+  console.log("Building...\n");
 
-  // Step 1: Read the data.
-  //
-  // This is the ONLY time data is read in the SSG flow. Compare this to SSR,
-  // where you'll see the exact same fs.readFileSync call - but inside the
-  // request handler, meaning it runs on every single request.
-  // Same code, completely different timing. That difference is everything.
-  console.log("  [1/3] Reading posts from", DATA_PATH);
+  if (!fs.existsSync(DIST_DIR)) {
+    fs.mkdirSync(DIST_DIR, { recursive: true });
+  }
+
+  // Read data once - shared by both SSG and PPR builds.
+  // This is the only data read in the entire build process.
+  console.log("  [1/4] Reading posts from", DATA_PATH);
   const posts = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8"));
   console.log(`        Found ${posts.length} posts.`);
 
-  // Step 2: Render the HTML.
-  //
+  const builtAt = new Date().toISOString();
+
+  // SSG build
   // renderPostList() is a pure function - same input, same output, every time.
   // We stamp the exact time the HTML was generated. This timestamp will be
   // FROZEN in the output file until you run the build script again.
   // When you later compare this to SSR (where the timestamp changes on every
   // refresh), the staleness tradeoff of SSG becomes immediately visible.
-  const generatedAt = new Date().toISOString();
-
-  console.log("  [2/3] Rendering HTML...");
-  const html = htmlShell({
+  console.log("  [2/4] Building SSG page (complete document)...");
+  const ssgHtml = htmlShell({
     title: "Blog Posts - SSG",
     body: renderPostList(posts),
     strategy: "SSG",
-    generatedAt,
+    generatedAt: builtAt,
   });
-  console.log(`        HTML length: ${html.length} characters.`);
+  fs.writeFileSync(SSG_OUT_PATH, ssgHtml, "utf-8");
+  console.log(`        Written to ${SSG_OUT_PATH} (${ssgHtml.length} chars)`);
 
-  // Step 3: Write to disk.
-  //
-  // We ensure the /dist directory exists first. In a larger SSG setup,
-  // this is where you'd write dozens or hundreds of files - one per page,
-  // one per blog post, one per category, etc. Frameworks like Next.js
-  // (with `output: 'export'`) do exactly this during `next build`.
-  console.log("  [3/3] Writing to", OUT_PATH);
-  if (!fs.existsSync(DIST_DIR)) {
-    fs.mkdirSync(DIST_DIR, { recursive: true });
-  }
-  fs.writeFileSync(OUT_PATH, html, "utf-8");
+  // PPR shell build
+  // Produces a COMPLETE, valid HTML document containing the static parts
+  // of the page, a placeholder skeleton for the dynamic widget, and a
+  // registration script for window.__pprResolve.
+  // Can be opened standalone in a browser and render correctly.
+  console.log(
+    "  [3/4] Building PPR static shell (complete HTML + resolver function)...",
+  );
+  const pprShell = buildPPRShell(posts, builtAt);
+  fs.writeFileSync(PPR_SHELL_PATH, pprShell, "utf-8");
+  console.log(
+    `        Written to ${PPR_SHELL_PATH} (${pprShell.length} chars)`,
+  );
+
+  const ssgEndsCorrectly = ssgHtml.trimEnd().endsWith("</html>");
+  const pprIsComplete = pprShell.includes("</html>");
+  console.log("\n  [4/4] Verifying outputs:");
+  console.log(`        ssg.html ends with </html>:       ${ssgEndsCorrectly}`);
+  console.log(`        ppr-shell.html is complete HTML:  ${pprIsComplete}`);
 
   console.log("\n  Build complete!");
-  console.log(`  Output: ${OUT_PATH}`);
-  console.log(`  Generated at: ${generatedAt}`);
+  console.log(`  Built at: ${builtAt}`);
+  console.log(`  SSG:      ${SSG_OUT_PATH}`);
+  console.log(`  PPR shell: ${PPR_SHELL_PATH}`);
+  console.log("\n  Start the server and visit:");
+  console.log("    http://localhost:3000/ssg  ← full pre-built page");
   console.log(
-    "\n  Start the server (node src/server.js) and visit http://localhost:3000/ssg\n",
+    "    http://localhost:3000/ppr  ← pre-built shell + live dynamic chunk\n",
   );
 }
 
