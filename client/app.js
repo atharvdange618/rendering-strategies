@@ -197,7 +197,7 @@ async function main() {
       statusEl.style.color = "#fca5a5";
     }
     appEl.innerHTML = "";
-    appEl.appendChild(renderError(err.message));
+    appEl.appendChild(renderError(error.message));
   }
 }
 
