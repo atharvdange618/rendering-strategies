@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog Posts - PPR</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      min-height: 100vh; padding: 2rem;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    .nav { display: flex; gap: 0.75rem; margin-bottom: 3rem; flex-wrap: wrap; }
+    .nav a {
+      color: #64748b; text-decoration: none; font-size: 0.85rem;
+      padding: 0.3rem 0.75rem; border: 1px solid #334155;
+      border-radius: 6px; transition: all 0.15s;
+    }
+    .nav a:hover { color: #e2e8f0; border-color: #64748b; }
+    .nav a.active { color: #818cf8; border-color: #818cf8; }
+    .strategy-banner {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 0.5rem 1rem;
+      margin-bottom: 1.5rem; font-size: 0.85rem;
+    }
+    .strategy-badge {
+      background: #818cf8; color: #0f172a;
+      font-weight: 700; font-size: 0.75rem;
+      padding: 0.15rem 0.5rem; border-radius: 4px;
+    }
+    .generated-at { color: #64748b; font-size: 0.8rem; }
+    .ppr-explainer {
+      background: #1e293b; border: 1px solid #818cf844;
+      border-radius: 8px; padding: 1rem 1.25rem;
+      margin-bottom: 2rem; font-size: 0.82rem; color: #94a3b8; line-height: 1.7;
+    }
+    .ppr-explainer strong { color: #818cf8; }
+    .ppr-build-note {
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 6px; padding: 0.6rem 1rem;
+      margin-top: 0.75rem; font-size: 0.78rem; color: #475569; font-family: monospace;
+    }
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; color: #f1f5f9; }
+    .subtitle { color: #64748b; margin-bottom: 2.5rem; }
+    .post-list { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+    .post-card {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; padding: 1.5rem;
+    }
+    .post-card:hover { border-color: #818cf8; }
+    .post-title { font-size: 1.1rem; font-weight: 600; color: #f1f5f9; margin-bottom: 0.4rem; }
+    .post-excerpt { color: #94a3b8; font-size: 0.9rem; line-height: 1.6; margin-bottom: 0.75rem; }
+    .post-meta { display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; color: #475569; flex-wrap: wrap; }
+    .tag {
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 4px; padding: 0.1rem 0.4rem;
+      font-size: 0.75rem; color: #64748b;
+    }
+    .section-divider { margin: 2.5rem 0; border: none; border-top: 1px solid #1e293b; }
+    .skeleton-widget {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 12px; padding: 1.5rem;
+    }
+    .skeleton-label {
+      font-size: 0.75rem; font-weight: 600; color: #475569;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem;
+    }
+    .skeleton-line {
+      height: 12px; border-radius: 4px;
+      background: linear-gradient(90deg, #1e293b, #334155, #1e293b);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite; margin-bottom: 0.5rem;
+    }
+    .skeleton-line.long { width: 80%; }
+    .skeleton-line.short { width: 45%; }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .trending-widget {
+      background: #1e293b; border: 1px solid #818cf844;
+      border-radius: 12px; padding: 1.5rem;
+    }
+    .trending-label {
+      font-size: 0.75rem; font-weight: 600; color: #818cf8;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem;
+    }
+    .trending-title { font-size: 1rem; font-weight: 600; color: #f1f5f9; margin-bottom: 0.5rem; }
+    .trending-meta { display: flex; gap: 1.5rem; font-size: 0.82rem; color: #64748b; }
+    .trending-views { color: #e2e8f0; }
+    .trending-trend { color: #4ade80; }
+    .trending-fetched { font-size: 0.75rem; color: #475569; margin-top: 0.75rem; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.2s ease-out; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="nav">
+      <a href="/">Home</a>
+      <a href="/ssg">SSG</a>
+      <a href="/ssr">SSR</a>
+      <a href="/csr">CSR</a>
+      <a href="/isr">ISR</a>
+      <a href="/ppr" class="active">PPR</a>
+    </nav>
+
+    <div class="strategy-banner">
+      <span class="strategy-badge">PPR</span>
+      <span>Rendered via <strong>Partial Pre-Rendering</strong></span>
+      <span class="generated-at">· Static shell built at 2026-05-29T15:49:08.091Z</span>
+    </div>
+
+    <div class="ppr-explainer">
+      The post list is <strong>pre-built at build time</strong>, served from disk like SSG.
+      The "Trending" widget below is a <strong>dynamic hole</strong> filled at request time.
+      Both arrive in one HTTP response. Chunk 2 is a tiny inline &lt;script&gt; injected
+      <em>after &lt;/html&gt;</em> - browsers execute it anyway. No broken HTML, no external file request.
+      <div class="ppr-build-note">
+        Shell built at: 2026-05-29T15:49:08.091Z
+        &nbsp;·&nbsp; Dynamic fetched at: <span id="fetch-time" style="color:#475569;">waiting...</span>
+      </div>
+    </div>
+
+    <h1>Blog Posts</h1>
+    <p class="subtitle">5 articles on JavaScript, architecture, and building things.</p>
+
+    <ul class="post-list">
+      
+      <li class="post-card">
+        <div class="post-title">What is the Virtual DOM?</div>
+        <div class="post-excerpt">A deep dive into the lightweight JavaScript representation of the real DOM and why frameworks like React use it.</div>
+        <div class="post-meta">
+          <span>Atharv Dange</span>
+          <span>2026-01-15</span>
+          <span class="tag">javascript</span><span class="tag">react</span><span class="tag">performance</span>
+        </div>
+      </li>
+
+      <li class="post-card">
+        <div class="post-title">How React&#039;s Reconciliation Algorithm Works</div>
+        <div class="post-excerpt">Understanding the diffing process that makes React updates efficient - keys, fiber, and the 5 cases of reconciliation.</div>
+        <div class="post-meta">
+          <span>Atharv Dange</span>
+          <span>2026-02-03</span>
+          <span class="tag">react</span><span class="tag">algorithms</span><span class="tag">internals</span>
+        </div>
+      </li>
+
+      <li class="post-card">
+        <div class="post-title">CSR vs SSR: It&#039;s Not Black and White</div>
+        <div class="post-excerpt">The rendering strategy debate is more nuanced than Twitter makes it seem. Here&#039;s how to actually think about the tradeoffs.</div>
+        <div class="post-meta">
+          <span>Atharv Dange</span>
+          <span>2026-03-10</span>
+          <span class="tag">architecture</span><span class="tag">performance</span><span class="tag">ssr</span>
+        </div>
+      </li>
+
+      <li class="post-card">
+        <div class="post-title">JavaScript Promises: A Deep Dive</div>
+        <div class="post-excerpt">From callback hell to async/await - understanding promises from the ground up with real analogies.</div>
+        <div class="post-meta">
+          <span>Atharv Dange</span>
+          <span>2026-04-01</span>
+          <span class="tag">javascript</span><span class="tag">async</span><span class="tag">fundamentals</span>
+        </div>
+      </li>
+
+      <li class="post-card">
+        <div class="post-title">Building an OIDC Provider from Scratch</div>
+        <div class="post-excerpt">What I learned from implementing a full spec-compliant OpenID Connect Identity Provider in Express + TypeScript.</div>
+        <div class="post-meta">
+          <span>Atharv Dange</span>
+          <span>2026-04-20</span>
+          <span class="tag">auth</span><span class="tag">oidc</span><span class="tag">typescript</span><span class="tag">security</span>
+        </div>
+      </li>
+    </ul>
+
+    <hr class="section-divider" />
+
+    <p style="font-size:0.75rem;color:#475569;margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.08em;">
+      Dynamic hole (filled by inline script after async fetch)
+    </p>
+
+    <div id="dynamic-hole">
+      <div class="skeleton-widget">
+        <div class="skeleton-label">Trending this week</div>
+        <div class="skeleton-line long"></div>
+        <div class="skeleton-line short"></div>
+      </div>
+    </div>
+
+  </div><!-- close .container -->
+
+  <script>
+    // window.__pprResolve is the contract between the pre-built shell and
+    // the dynamic chunk. The shell registers it. The chunk calls it.
+    // This function is available the moment the browser parses this block -
+    // long before the dynamic chunk arrives. When chunk 2's inline <script>
+    // calls window.__pprResolve('dynamic-hole', html), this runs immediately.
+    window.__pprResolve = function(id, html) {
+      var el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    };
+  </script>
+</body>
+</html>
