@@ -1,7 +1,7 @@
 {
   "name": "rendering-strategies",
   "version": "1.0.0",
-  "description": "A from-first-principles exploration of SSG, SSR, CSR, and ISR - zero frameworks.",
+  "description": "A from-first-principles exploration of SSG, SSR, CSR, ISR, and PPR - zero frameworks. Built with only Node.js's built-in http module.",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -9,11 +9,30 @@
     "build:start": "node src/build.js && node src/server.js"
   },
   "keywords": [
+    "rendering",
     "SSG",
     "SSR",
     "CSR",
-    "ISR"
+    "ISR",
+    "PPR",
+    "web-performance",
+    "server-side-rendering",
+    "static-site-generation",
+    "partial-pre-rendering",
+    "nodejs",
+    "web-development"
   ],
   "author": "Atharv Dange",
-  "license": "MIT"
+  "license": "MIT",
+  "homepage": "https://github.com/atharvdange618/rendering-strategies#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atharvdange618/rendering-strategies.git"
+  },
+  "bugs": {
+    "url": "https://github.com/atharvdange618/rendering-strategies/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
 }
