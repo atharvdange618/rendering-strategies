@@ -1,27 +1,27 @@
 /**
  * ppr.js - Partial Pre-Rendering
  *
- * Previous versions had two problems:
+ * Previous versions had three problems:
  *   v1: Generated the shell per-request (just SSR + streaming, not truly pre-built)
- *   v2: Used an intentionally incomplete HTML document (half-open, no </html>)
+ *   v2: Stored an incomplete HTML document on disk (no </body></html>)
+ *   v3: Streamed the resolver script AFTER </html>. Browsers run it, but the
+ *       HTML spec treats content after </html> as a parse error that it
+ *       recovers from. The file was valid; the response was not.
  *
  * This version:
- *   - Reads a COMPLETE, valid pre-built HTML document from disk (chunk 1)
- *   - Streams it immediately so the browser starts rendering
- *   - Does async work in parallel
- *   - Streams a small inline <script> after </html> (chunk 2)
- *   - That script fills in the placeholder with real content
+ *   - Reads a COMPLETE, valid pre-built HTML document from disk
+ *   - Streams everything up to </body> immediately (chunk 1)
+ *   - Does async work while the browser renders that
+ *   - Streams a small inline <script> that fills the placeholder (chunk 2)
+ *   - Closes with the held-back </body></html>
  *
- * The trick: browsers execute inline <script> tags that appear AFTER </html>.
- * They parse the entire HTTP response stream progressively, regardless of
- * document structure. This is intentional, spec-compliant browser behavior.
- * React's streaming SSR uses this exact mechanism - it injects <script> tags
- * with $RC() calls (its internal content replacer) after the closing tags.
+ * The file on disk stays a real document, and so does the response.
+ * React does the same: it holds back the closing tags until every Suspense
+ * boundary has resolved, and Next.js moves the "</body></html>" suffix to the
+ * end of the stream.
  *
- * A key detail worth noting: instead of <script src="file.js">
- * (which would fire a NEW HTTP request, separate from the current stream), we use
- * inline <script>code</script> which is read directly from the current stream.
- * One connection, two delivery moments, complete valid HTML.
+ * Chunk 2 is an inline <script>code</script>, not <script src="file.js">.
+ * src= would fire a NEW HTTP request; inline code is read from this stream.
  */
 
 const fs = require("fs");
@@ -81,21 +81,23 @@ module.exports = async function handlePPR(req, res) {
     "Cache-Control": "no-cache",
   });
 
-  // CHUNK 1: The complete, pre-built HTML document.
-  // This is a valid, self-contained document - it has </body></html>.
-  // It contains the skeleton placeholder and a global resolver function
-  // that chunk 2's inline script will call.
-  // The browser starts rendering this immediately while we do async work.
-  res.write(shellHtml);
+  // Split the shell at </body>. Everything before it goes out now; the
+  // closing tags wait until the dynamic chunk has been written.
+  const splitAt = shellHtml.lastIndexOf("</body>");
+
+  // CHUNK 1: The pre-built document, minus its closing tags.
+  // It contains the skeleton placeholder and the window.__pprResolve function
+  // that chunk 2 calls. The browser starts rendering this immediately.
+  res.write(shellHtml.slice(0, splitAt));
 
   // Fetch the dynamic data. This runs WHILE the browser renders the shell.
   // In a real app: DB query or external API call etc.
   const trending = await fetchTrendingData();
   const fetchedAt = new Date().toISOString();
 
-  // CHUNK 2: Stream the dynamic closing chunk.
-  // This contains the resolved trending widget, the swap script, and the
-  // </body></html> that completes the open document.
+  // CHUNK 2: The inline resolver script, still inside <body>.
+  res.write(buildPPRDynamicChunk(trending, fetchedAt));
 
-  res.end(buildPPRDynamicChunk(trending, fetchedAt));
+  // Close the document.
+  res.end(shellHtml.slice(splitAt));
 };

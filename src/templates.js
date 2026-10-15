@@ -370,19 +370,16 @@ function getStrategyFullName(strategy) {
  *   1. The shell includes a global window.__pprResolve(id, html) function
  *      defined in a <script> block inside <body>, before </body></html>.
  *
- *   2. At request time, after async work completes, the server streams a
- *      tiny inline <script> AFTER the closing </html> tag.
+ *   2. At request time, the server streams the shell up to </body>, holds
+ *      back the closing tags, and does its async work.
  *
- *   3. Browsers execute inline <script> tags that appear after </html>.
- *      This is intentional, spec-compliant behavior - browsers parse the
- *      entire HTTP response stream, not just up to the closing tag.
- *      React's streaming SSR uses this same mechanic.
+ *   3. It then streams a tiny inline <script>, still inside <body>, that
+ *      calls window.__pprResolve() to swap the skeleton for real content.
  *
- *   4. That post-</html> script calls window.__pprResolve(), which was
- *      already registered during the initial document parse. It swaps
- *      the skeleton placeholder with the real dynamic content.
+ *   4. Finally it sends the held-back </body></html>.
  *
- * The result: one HTTP connection, two delivery moments, zero broken HTML.
+ * The result: one HTTP connection, two delivery moments, and valid HTML both
+ * on disk and on the wire.
  *
  * @param {Array}  posts   - Post data from build time
  * @param {string} builtAt - ISO timestamp from when the build script ran
@@ -495,12 +492,12 @@ function buildPPRShell(posts, builtAt) {
  * Builds the dynamic closing chunk - the second half of a PPR response.
  *
  * This is generated at request time, after the async data fetch resolves.
- * It contains the resolved content, the swap script, and the closing tags
- * that complete the HTML document opened by buildPPRShell().
+ * It contains the resolved content and the swap script. The handler writes
+ * it before the shell's held-back </body></html>.
  *
  * @param {object} trending  - Live data fetched at request time
  * @param {string} fetchedAt - ISO timestamp of when the fetch completed
- * @returns {string} HTML fragment that completes the open document
+ * @returns {string} Inline <script> that fills the dynamic hole
  */
 function buildPPRDynamicChunk(trending, fetchedAt) {
   const widgetHtml = `
@@ -520,8 +517,7 @@ function buildPPRDynamicChunk(trending, fetchedAt) {
     .replace(/\\/g, "\\\\")
     .replace(/`/g, "\\`");
 
-  // CHUNK 2: An inline <script> that arrives AFTER </html>.
-  // Browsers parse and execute this even though the document is "closed."
+  // CHUNK 2: An inline <script>, streamed while <body> is still open.
   // window.__pprResolve() was defined inside the shell's <script> block,
   // so it's available here. We call it with the hole ID and the resolved HTML
 

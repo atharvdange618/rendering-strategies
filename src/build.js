@@ -12,14 +12,14 @@
  *
  *   SSG shell  → complete document, served as-is, connection closes immediately
  *   PPR shell  → complete document, streamed first, connection stays open
- *                while dynamic data fetches in parallel. The stream finishes
- *                by appending a dynamic chunk (an inline script that swaps the
- *                placeholder content) after the closing tags.
+ *                while dynamic data fetches in parallel. The server holds back
+ *                </body></html>, streams a dynamic chunk (an inline script
+ *                that swaps the placeholder content), then closes the document.
  *
  * Both are pre-built from the same data source at the same build time.
  * Both are served from disk at request time with no per-request rendering.
- * Unlike older hacks that used a half-open document, our PPR shell is a complete,
- * valid HTML document that defines the window.__pprResolve contract.
+ * The PPR shell on disk is a complete, valid HTML document that defines the
+ * window.__pprResolve contract. It opens fine on its own in a browser.
  */
 
 const fs = require("fs");
