@@ -27,7 +27,6 @@ const handlePPR = require("./strategies/ppr");
 const PORT = 3000;
 
 const postsPath = path.join(__dirname, "../data/posts.json");
-const posts = JSON.parse(fs.readFileSync(postsPath, "utf-8"));
 
 /**
  * A tiny router.
@@ -62,7 +61,7 @@ function router(req, res) {
       break;
 
     case "/isr":
-      handleISR(req, res, posts);
+      handleISR(req, res);
       break;
 
     case "/ppr":
@@ -70,7 +69,7 @@ function router(req, res) {
       break;
 
     case "/api/posts":
-      handleApiPosts(req, res, posts);
+      handleApiPosts(req, res);
       break;
 
     default:
@@ -105,7 +104,9 @@ function handleHome(req, res) {
  * so it's not strictly needed here - but in real CSR setups, your API and
  * your frontend are often on different origins.
  */
-function handleApiPosts(req, res, posts) {
+function handleApiPosts(req, res) {
+  // Read per request, like SSR. CSR is only "fresh per fetch" if the API is.
+  const posts = JSON.parse(fs.readFileSync(postsPath, "utf-8"));
   const payload = JSON.stringify({
     posts,
     generatedAt: new Date().toISOString(),

@@ -23,6 +23,7 @@ const { htmlShell, renderPostList } = require("./templates");
 // In production we'd use something like 60_000 (1 min) or 3_600_000 (1 hour).
 const REVALIDATION_WINDOW_MS = 10_000;
 
+const DATA_PATH = path.join(__dirname, "../data/posts.json");
 const DIST_DIR = path.join(__dirname, "../dist");
 const CACHE_PATH = path.join(DIST_DIR, "isr.html");
 
@@ -109,7 +110,10 @@ function getCacheStatus() {
  *
  * @returns {Promise<string>} The generated HTML string
  */
-async function generateAndCache(posts) {
+async function generateAndCache() {
+  // Read the data at regeneration time. Using a copy loaded at server start
+  // would refresh the timestamp but never the content.
+  const posts = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8"));
   const generatedAt = new Date().toISOString();
 
   // ISR diagnostics panel - makes the caching behavior visible.
@@ -169,7 +173,7 @@ async function generateAndCache(posts) {
  * The ordering matters enormously.
  */
 
-async function revalidateInBackground(posts) {
+async function revalidateInBackground() {
   if (cache.isRevalidating) {
     console.log("  [ISR] Revalidation already in progress, skipping.");
     return;
@@ -179,7 +183,7 @@ async function revalidateInBackground(posts) {
   console.log("  [ISR] Background revalidation started...");
 
   try {
-    await generateAndCache(posts);
+    await generateAndCache();
     console.log(
       "  [ISR] Background revalidation complete. Cache refreshed at",
       new Date().toISOString(),

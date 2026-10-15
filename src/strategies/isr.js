@@ -30,7 +30,7 @@
 
 const isrCache = require("../isr-cache");
 
-module.exports = async function handleISR(req, res, posts) {
+module.exports = async function handleISR(req, res) {
   const cachedHtml = isrCache.readCache();
 
   // state 1 - cold start  - no cache file exists
@@ -39,7 +39,7 @@ module.exports = async function handleISR(req, res, posts) {
 
     // we need to generate synchronously here because we have no stale version to fall back on. This request waits. Every subsequent requests hit the cache.
 
-    const html = await isrCache.generateAndCache(posts);
+    const html = await isrCache.generateAndCache();
 
     console.log("  [ISR] Inital cache ready. Serving the fresh page.");
 
@@ -86,5 +86,5 @@ module.exports = async function handleISR(req, res, posts) {
   res.end(cachedHtml);
 
   // now we will trigger the background rebuild. `await` is intentionally NOT used here. We want this to run without blocking anything. The promise resolves on its own time, updates the cache file on disk, and the next request picks it up.
-  isrCache.revalidateInBackground(posts);
+  isrCache.revalidateInBackground();
 };
