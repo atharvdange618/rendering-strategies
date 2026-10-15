@@ -113,7 +113,7 @@ function getCacheStatus() {
 async function generateAndCache() {
   // Read the data at regeneration time. Using a copy loaded at server start
   // would refresh the timestamp but never the content.
-  const posts = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8"));
+  const posts = JSON.parse(await fs.promises.readFile(DATA_PATH, "utf-8"));
   const generatedAt = new Date().toISOString();
 
   // ISR diagnostics panel - makes the caching behavior visible.
@@ -146,14 +146,13 @@ async function generateAndCache() {
     generatedAt,
   });
 
-  if (!fs.existsSync(DIST_DIR)) {
-    fs.mkdirSync(DIST_DIR, {
-      recursive: true,
-    });
-  }
+  // Async I/O is what makes this "background" work. With the sync versions,
+  // the whole rebuild would run on the main thread right after res.end(),
+  // and every other request would wait for it.
+  await fs.promises.mkdir(DIST_DIR, { recursive: true });
 
   // Write to disk - this overwrites the previous cached file
-  fs.writeFileSync(CACHE_PATH, html, "utf-8");
+  await fs.promises.writeFile(CACHE_PATH, html, "utf-8");
 
   // Update in-memory state
   cache.lastGeneratedAt = Date.now();
