@@ -1,9 +1,10 @@
 /**
- * build.js - Build script for SSG and PPR
+ * build.js - Build script for SSG, ISR and PPR
  *
- * Generates two kinds of output files:
+ * Generates three output files:
  *
  *   dist/ssg.html       - COMPLETE HTML document (SSG)
+ *   dist/isr.html       - initial ISR cache, regenerated later by the server
  *   dist/ppr-shell.html - COMPLETE HTML document with static layout & resolver (PPR)
  *
  * The difference between those two output types is the central architectural
@@ -24,13 +25,14 @@
 const fs = require("fs");
 const path = require("path");
 const { htmlShell, renderPostList, buildPPRShell } = require("./templates");
+const { generateAndCache } = require("./isr-cache");
 
 const DATA_PATH = path.join(__dirname, "../data/posts.json");
 const DIST_DIR = path.join(__dirname, "../dist");
 const SSG_OUT_PATH = path.join(DIST_DIR, "ssg.html");
 const PPR_SHELL_PATH = path.join(DIST_DIR, "ppr-shell.html");
 
-function build() {
+async function build() {
   console.log("Building...\n");
 
   if (!fs.existsSync(DIST_DIR)) {
@@ -39,7 +41,7 @@ function build() {
 
   // Read data once - shared by both SSG and PPR builds.
   // This is the only data read in the entire build process.
-  console.log("  [1/4] Reading posts from", DATA_PATH);
+  console.log("  [1/5] Reading posts from", DATA_PATH);
   const posts = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8"));
   console.log(`        Found ${posts.length} posts.`);
 
@@ -51,7 +53,7 @@ function build() {
   // FROZEN in the output file until you run the build script again.
   // When you later compare this to SSR (where the timestamp changes on every
   // refresh), the staleness tradeoff of SSG becomes immediately visible.
-  console.log("  [2/4] Building SSG page (complete document)...");
+  console.log("  [2/5] Building SSG page (complete document)...");
   const ssgHtml = htmlShell({
     title: "Blog Posts - SSG",
     body: renderPostList(posts),
@@ -61,13 +63,20 @@ function build() {
   fs.writeFileSync(SSG_OUT_PATH, ssgHtml, "utf-8");
   console.log(`        Written to ${SSG_OUT_PATH} (${ssgHtml.length} chars)`);
 
+  // ISR initial cache
+  // Same function the server calls when the cache goes stale. Running it here
+  // means the first request after a deploy is served from cache, not a cold start.
+  console.log("  [3/5] Building ISR cache...");
+  await generateAndCache();
+  console.log("        Written to dist/isr.html");
+
   // PPR shell build
   // Produces a COMPLETE, valid HTML document containing the static parts
   // of the page, a placeholder skeleton for the dynamic widget, and a
   // registration script for window.__pprResolve.
   // Can be opened standalone in a browser and render correctly.
   console.log(
-    "  [3/4] Building PPR static shell (complete HTML + resolver function)...",
+    "  [4/5] Building PPR static shell (complete HTML + resolver function)...",
   );
   const pprShell = buildPPRShell(posts, builtAt);
   fs.writeFileSync(PPR_SHELL_PATH, pprShell, "utf-8");
@@ -77,7 +86,7 @@ function build() {
 
   const ssgEndsCorrectly = ssgHtml.trimEnd().endsWith("</html>");
   const pprIsComplete = pprShell.includes("</html>");
-  console.log("\n  [4/4] Verifying outputs:");
+  console.log("\n  [5/5] Verifying outputs:");
   console.log(`        ssg.html ends with </html>:       ${ssgEndsCorrectly}`);
   console.log(`        ppr-shell.html is complete HTML:  ${pprIsComplete}`);
 
@@ -92,4 +101,7 @@ function build() {
   );
 }
 
-build();
+build().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
