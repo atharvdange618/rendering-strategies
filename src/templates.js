@@ -520,17 +520,16 @@ function buildPPRDynamicChunk(trending, fetchedAt) {
         Fetched at request time: ${escapeHtml(fetchedAt)}
         - this changes every request. The shell timestamp above does not.
       </div>
-    </div>`
-    .replace(/`/g, "\\`")
-    .replace(/\\/g, "\\\\")
-    .replace(/`/g, "\\`");
+    </div>`;
 
   // CHUNK 2: An inline <script>, streamed while <body> is still open.
   // window.__pprResolve() was defined inside the shell's <script> block,
-  // so it's available here. We call it with the hole ID and the resolved HTML
-
-  // One more thing: the reason why did not do "<script src='file.js'>":
-  // src= fires a new HTTP request. Inline script reads from THIS stream.
+  // so it's available here. We call it with the hole ID and the resolved HTML.
+  // JSON.stringify makes the HTML a safe JS string literal, and escapeHtml
+  // above already turned any "<" into "&lt;", so no "</script>" can sneak in.
+  //
+  // Why not "<script src='file.js'>"? src= fires a new HTTP request.
+  // An inline script is read from THIS stream.
   const resolverCall = `
 <script>
   (function() {
