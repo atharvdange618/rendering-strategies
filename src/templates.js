@@ -35,6 +35,7 @@ function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
     ISR: "#f59e0b",
     CSR: "#c084fc",
     PPR: "#818cf8",
+    STREAMING: "#38bdf8",
   };
 
   const badgeColor = strategyColors[strategy] || "#94a3b8";
@@ -51,6 +52,7 @@ function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
     if (strategy === "CSR" && path === "/csr") return ' class="active"';
     if (strategy === "ISR" && path === "/isr") return ' class="active"';
     if (strategy === "PPR" && path === "/ppr") return ' class="active"';
+    if (strategy === "STREAMING" && path === "/streaming-ssr") return ' class="active"';
     return "";
   };
 
@@ -194,6 +196,7 @@ function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
       <a href="/csr"${getActiveClass("/csr")}>CSR</a>
       <a href="/isr"${getActiveClass("/isr")}>ISR</a>
       <a href="/ppr"${getActiveClass("/ppr")}>PPR</a>
+      <a href="/streaming-ssr"${getActiveClass("/streaming-ssr")}>Streaming SSR</a>
     </nav>
 
     <div class="strategy-banner">
@@ -293,6 +296,14 @@ function renderHomePage() {
       description:
         "Static shell served instantly from disk. Dynamic hole filled at request time. Both arrive in ONE HTTP response via chunked transfer - no extra network round-trips.",
     },
+    {
+      name: "STREAMING",
+      path: "/streaming-ssr",
+      color: "#38bdf8",
+      title: "Streaming SSR (compare with PPR)",
+      description:
+        "Streams exactly like PPR, but the shell is rendered on every request instead of read from disk. Refresh both: this timestamp changes, PPR's shell timestamp doesn't.",
+    },
   ];
 
   const cards = strategies
@@ -329,7 +340,7 @@ function renderHomePage() {
   return `
     <h1 style="margin-bottom:0.5rem;">Rendering Strategies</h1>
     <p class="subtitle" style="margin-bottom:2.5rem;">
-      A from-first-principles exploration of SSG, SSR, CSR, and ISR - built with zero frameworks.
+      A from-first-principles exploration of SSG, SSR, CSR, ISR, and PPR - built with zero frameworks.
     </p>
     <div style="display:grid; gap:1rem;">
       ${cards}
@@ -359,6 +370,7 @@ function getStrategyFullName(strategy) {
     CSR: "Client-Side Rendering",
     ISR: "Incremental Static Regeneration",
     PPR: "Partial Pre-Rendering",
+    STREAMING: "Streaming Server-Side Rendering",
   };
 
   return names[strategy] || strategy;
@@ -385,9 +397,9 @@ function getStrategyFullName(strategy) {
  * @param {string} builtAt - ISO timestamp from when the build script ran
  * @returns {string} Complete, valid HTML document
  */
-// Styles only the PPR page needs. Everything else (nav, banner, post cards)
-// comes from htmlShell, same as every other strategy.
-const PPR_STYLES = `
+// Styles for pages with a dynamic hole (PPR and streaming SSR). Everything
+// else (nav, banner, post cards) comes from htmlShell, like every other page.
+const DYNAMIC_HOLE_STYLES = `
   <style>
     .ppr-explainer {
       background: #1e293b; border: 1px solid #818cf844;
@@ -442,21 +454,9 @@ const PPR_STYLES = `
     .fade-in { animation: fadeIn 0.2s ease-out; }
   </style>`;
 
-function buildPPRShell(posts, builtAt) {
-  const body = `
-    <div class="ppr-explainer">
-      The post list is <strong>pre-built at build time</strong>, served from disk like SSG.
-      The "Trending" widget below is a <strong>dynamic hole</strong> filled at request time.
-      Both arrive in one HTTP response. Chunk 2 is a tiny inline &lt;script&gt; streamed
-      into the same response - no external file request.
-      <div class="ppr-build-note">
-        Shell built at: ${escapeHtml(builtAt)}
-        &nbsp;·&nbsp; Dynamic fetched at: <span id="fetch-time" style="color:#475569;">waiting...</span>
-      </div>
-    </div>
-
-    ${renderPostList(posts)}
-
+// The skeleton placeholder plus the resolver function that chunk 2 calls.
+function renderDynamicHole() {
+  return `
     <hr class="section-divider" />
 
     <p style="font-size:0.75rem;color:#475569;margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.08em;">
@@ -479,13 +479,62 @@ function buildPPRShell(posts, builtAt) {
         if (el) el.innerHTML = html;
       };
     </script>`;
+}
+
+function buildPPRShell(posts, builtAt) {
+  const body = `
+    <div class="ppr-explainer">
+      The post list is <strong>pre-built at build time</strong>, served from disk like SSG.
+      The "Trending" widget below is a <strong>dynamic hole</strong> filled at request time.
+      Both arrive in one HTTP response. Chunk 2 is a tiny inline &lt;script&gt; streamed
+      into the same response - no external file request.
+      <div class="ppr-build-note">
+        Shell built at: ${escapeHtml(builtAt)}
+        &nbsp;·&nbsp; Dynamic fetched at: <span id="fetch-time" style="color:#475569;">waiting...</span>
+      </div>
+    </div>
+
+    ${renderPostList(posts)}
+
+    ${renderDynamicHole()}`;
 
   return htmlShell({
     title: "Blog Posts - PPR",
     body,
     strategy: "PPR",
     generatedAt: builtAt,
-    extraHead: PPR_STYLES,
+    extraHead: DYNAMIC_HOLE_STYLES,
+  });
+}
+
+/**
+ * Builds the streaming SSR shell. Same page as the PPR shell, but the
+ * handler calls this on every request instead of the build calling it once.
+ *
+ * @param {Array}  posts       - Post data read for this request
+ * @param {string} generatedAt - ISO timestamp of this request
+ * @returns {string} Complete HTML document
+ */
+function buildStreamingSSRShell(posts, generatedAt) {
+  const body = `
+    <div class="ppr-explainer">
+      This page streams <strong>exactly like PPR</strong>: shell first, dynamic
+      chunk after a 2s fetch, one response. The difference is the shell. It was
+      <strong>rendered for this request</strong>, so the timestamp above changes
+      every refresh. Compare with <a href="/ppr" style="color:#38bdf8;">/ppr</a>,
+      whose shell was built once.
+    </div>
+
+    ${renderPostList(posts)}
+
+    ${renderDynamicHole()}`;
+
+  return htmlShell({
+    title: "Blog Posts - Streaming SSR",
+    body,
+    strategy: "STREAMING",
+    generatedAt,
+    extraHead: DYNAMIC_HOLE_STYLES,
   });
 }
 
@@ -552,5 +601,6 @@ module.exports = {
   renderHomePage,
   escapeHtml,
   buildPPRShell,
+  buildStreamingSSRShell,
   buildPPRDynamicChunk,
 };

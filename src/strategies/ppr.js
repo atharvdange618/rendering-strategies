@@ -26,8 +26,8 @@
 
 const fs = require("fs");
 const path = require("path");
-const { htmlShell, buildPPRDynamicChunk } = require("../templates");
-const trendingSource = require("../trending");
+const { htmlShell } = require("../templates");
+const streamWithDynamicHole = require("../stream-dynamic-hole");
 
 const PPR_SHELL_PATH = path.join(__dirname, "../../dist/ppr-shell.html");
 
@@ -60,37 +60,7 @@ module.exports = async function handlePPR(req, res) {
     return;
   }
 
-  res.writeHead(200, {
-    "Content-Type": "text/html",
-    "Transfer-Encoding": "chunked",
-    "X-Accel-Buffering": "no",
-    "Cache-Control": "no-cache",
-  });
-
-  // Split the shell at </body>. Everything before it goes out now; the
-  // closing tags wait until the dynamic chunk has been written.
-  const splitAt = shellHtml.lastIndexOf("</body>");
-
-  // CHUNK 1: The pre-built document, minus its closing tags.
-  // It contains the skeleton placeholder and the window.__pprResolve function
-  // that chunk 2 calls. The browser starts rendering this immediately.
-  res.write(shellHtml.slice(0, splitAt));
-
-  // Fetch the dynamic data. This runs WHILE the browser renders the shell.
-  // In a real app: DB query or external API call etc.
-  // If it fails, the hole still needs filling and the stream still needs
-  // closing. Otherwise the skeleton shimmers forever on an open connection.
-  let trending = null;
-  try {
-    trending = await trendingSource.fetchTrendingData();
-  } catch (err) {
-    console.error("  [PPR] Trending fetch failed:", err.message);
-  }
-  const fetchedAt = new Date().toISOString();
-
-  // CHUNK 2: The inline resolver script, still inside <body>.
-  res.write(buildPPRDynamicChunk(trending, fetchedAt));
-
-  // Close the document.
-  res.end(shellHtml.slice(splitAt));
+  // From here on, PPR and streaming SSR run the same code. The only
+  // difference is that shellHtml came from disk instead of a render call.
+  await streamWithDynamicHole(res, shellHtml);
 };

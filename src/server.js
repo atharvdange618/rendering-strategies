@@ -8,6 +8,7 @@
  *   GET /csr        → Client-Side Rendering   (serves empty shell + JS)
  *   GET /isr        → Incremental Static Regen (serves cached file, revalidates async)
  *   GET /ppr        → Partial Pre-Rendering   (serves pre-built shell + dynamic chunk)
+ *   GET /streaming-ssr → Streaming SSR (PPR's delivery, shell rendered per request)
  *   GET /api/posts  → JSON API used by the CSR page
  *   GET /client/*   → Static file serving for client-side JS
  */
@@ -23,6 +24,7 @@ const handleSSR = require("./strategies/ssr");
 const handleCSR = require("./strategies/csr");
 const handleISR = require("./strategies/isr");
 const handlePPR = require("./strategies/ppr");
+const handleStreamingSSR = require("./strategies/streaming-ssr");
 
 const PORT = 3000;
 
@@ -66,6 +68,10 @@ function router(req, res) {
 
     case "/ppr":
       handlePPR(req, res);
+      break;
+
+    case "/streaming-ssr":
+      handleStreamingSSR(req, res);
       break;
 
     case "/api/posts":
@@ -169,6 +175,7 @@ if (require.main === module) {
     console.log(`    /csr    → Client-Side Rendering`);
     console.log(`    /isr    → Incremental Static Regeneration`);
     console.log(`    /ppr    → Partial Pre-Rendering`);
+    console.log(`    /streaming-ssr → Streaming SSR (compare with /ppr)`);
     console.log(`    /api/posts → JSON API (used by CSR)\n`);
   });
 }
