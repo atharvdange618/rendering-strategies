@@ -123,6 +123,25 @@ describe("step 2: ISR revalidation is async", () => {
     assert.equal(second.headers.get("x-isr-status"), "stale-revalidating");
     await waitFor(() => !isrCache.isRevalidating);
   });
+
+  test("a request mid-write never sees a truncated cache file", async () => {
+    // writeFile truncates before it writes. Freeze it in that state.
+    const realWriteFile = fs.promises.writeFile;
+    mock.method(fs.promises, "writeFile", async (file, ...rest) => {
+      await realWriteFile(file, "");
+      await new Promise((r) => setTimeout(r, 100));
+      return realWriteFile(file, ...rest);
+    });
+    makeIsrCacheStale();
+
+    await (await get("/isr")).text();
+    const during = await get("/isr");
+    const body = await during.text();
+
+    assert.notEqual(during.headers.get("x-isr-status"), "cold-start");
+    assert.ok(body.includes("</html>"), "served a truncated page");
+    await waitFor(() => !isrCache.isRevalidating);
+  });
 });
 
 describe("step 3: build generates the ISR cache", () => {

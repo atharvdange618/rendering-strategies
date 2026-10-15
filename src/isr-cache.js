@@ -151,8 +151,13 @@ async function generateAndCache() {
   // and every other request would wait for it.
   await fs.promises.mkdir(DIST_DIR, { recursive: true });
 
-  // Write to disk - this overwrites the previous cached file
-  await fs.promises.writeFile(CACHE_PATH, html, "utf-8");
+  // Write to a temp file, then rename it over the cache. writeFile truncates
+  // before it writes, so writing CACHE_PATH directly would let a concurrent
+  // request read an empty file and treat it as a cold start. A rename swaps
+  // the file in one step: readers see the old page or the new one.
+  const tmpPath = CACHE_PATH + ".tmp";
+  await fs.promises.writeFile(tmpPath, html, "utf-8");
+  await fs.promises.rename(tmpPath, CACHE_PATH);
 
   // Update in-memory state
   cache.lastGeneratedAt = Date.now();
@@ -188,6 +193,8 @@ async function revalidateInBackground() {
       new Date().toISOString(),
     );
   } catch (err) {
+    // On Windows, the rename can fail with EPERM while a virus scanner holds
+    // the file. The cache stays stale and the next stale request retries.
     console.error("  [ISR] Revalidation failed:", err.message);
   } finally {
     cache.isRevalidating = false;
