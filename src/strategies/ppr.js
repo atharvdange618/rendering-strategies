@@ -27,23 +27,9 @@
 const fs = require("fs");
 const path = require("path");
 const { htmlShell, buildPPRDynamicChunk } = require("../templates");
+const trendingSource = require("../trending");
 
 const PPR_SHELL_PATH = path.join(__dirname, "../../dist/ppr-shell.html");
-
-// Simulate async DB call
-function fetchTrendingData() {
-  return new Promise((resolve) => {
-    // Increased delay from 150ms to 2000ms (2 seconds) to make the PPR chunking gap 
-    // visually obvious in the browser during demonstrations.
-    setTimeout(() => {
-      resolve({
-        title: "Building an OIDC Provider from Scratch",
-        views: 1432,
-        trend: "+38% this week",
-      });
-    }, 2000);
-  });
-}
 
 module.exports = async function handlePPR(req, res) {
   // Read the pre-built shell from disk.
@@ -92,7 +78,14 @@ module.exports = async function handlePPR(req, res) {
 
   // Fetch the dynamic data. This runs WHILE the browser renders the shell.
   // In a real app: DB query or external API call etc.
-  const trending = await fetchTrendingData();
+  // If it fails, the hole still needs filling and the stream still needs
+  // closing. Otherwise the skeleton shimmers forever on an open connection.
+  let trending = null;
+  try {
+    trending = await trendingSource.fetchTrendingData();
+  } catch (err) {
+    console.error("  [PPR] Trending fetch failed:", err.message);
+  }
   const fetchedAt = new Date().toISOString();
 
   // CHUNK 2: The inline resolver script, still inside <body>.

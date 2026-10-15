@@ -433,6 +433,7 @@ const PPR_STYLES = `
     .trending-meta { display: flex; gap: 1.5rem; font-size: 0.82rem; color: #64748b; }
     .trending-views { color: #e2e8f0; }
     .trending-trend { color: #4ade80; }
+    .trending-error { border-color: #f8717144; color: #fca5a5; font-size: 0.9rem; }
     .trending-fetched { font-size: 0.75rem; color: #475569; margin-top: 0.75rem; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(4px); }
@@ -495,12 +496,19 @@ function buildPPRShell(posts, builtAt) {
  * It contains the resolved content and the swap script. The handler writes
  * it before the shell's held-back </body></html>.
  *
- * @param {object} trending  - Live data fetched at request time
+ * @param {object|null} trending - Live data fetched at request time, or null if the fetch failed
  * @param {string} fetchedAt - ISO timestamp of when the fetch completed
  * @returns {string} Inline <script> that fills the dynamic hole
  */
 function buildPPRDynamicChunk(trending, fetchedAt) {
-  const widgetHtml = `
+  const widgetHtml = !trending
+    ? `
+    <div class="trending-widget trending-error fade-in">
+      <div class="trending-label">Trending this week</div>
+      Couldn't load trending posts. The rest of the page came from the
+      pre-built shell, so it is unaffected.
+    </div>`
+    : `
     <div class="trending-widget fade-in">
       <div class="trending-label">Trending this week</div>
       <div class="trending-title">${escapeHtml(trending.title)}</div>
