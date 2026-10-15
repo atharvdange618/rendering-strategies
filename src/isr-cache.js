@@ -204,10 +204,13 @@ async function revalidateInBackground() {
 /**
  * Reads the current cached file from disk.
  * Returns the HTML string, or null if no cache file exists yet.
+ *
+ * Async on purpose. A sync read blocks the main thread on every request,
+ * and under load that capped ISR at SSR's throughput instead of SSG's.
  */
-function readCache() {
+async function readCache() {
   try {
-    return fs.readFileSync(CACHE_PATH, "utf-8");
+    return await fs.promises.readFile(CACHE_PATH, "utf-8");
   } catch {
     return null;
   }

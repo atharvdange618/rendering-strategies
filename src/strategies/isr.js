@@ -31,7 +31,7 @@
 const isrCache = require("../isr-cache");
 
 module.exports = async function handleISR(req, res) {
-  const cachedHtml = isrCache.readCache();
+  const cachedHtml = await isrCache.readCache();
 
   // state 1 - cold start  - no cache file exists
   if (!cachedHtml) {
