@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "build": "node src/build.js",
-    "build:start": "node src/build.js && node src/server.js"
+    "build:start": "node src/build.js && node src/server.js",
+    "test": "node --test"
   },
   "keywords": [
     "rendering",
@@ -33,6 +34,6 @@
     "url": "https://github.com/atharvdange618/rendering-strategies/issues"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

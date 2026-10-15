@@ -154,15 +154,20 @@ function handle404(req, res) {
   `);
 }
 
-const server = http.createServer(router);
-server.listen(PORT, () => {
-  console.log(`\n  Server running at http://localhost:${PORT}`);
-  console.log(`\n  Routes:`);
-  console.log(`    /       → Home`);
-  console.log(`    /ssg    → Static Site Generation`);
-  console.log(`    /ssr    → Server-Side Rendering`);
-  console.log(`    /csr    → Client-Side Rendering`);
-  console.log(`    /isr    → Incremental Static Regeneration`);
-  console.log(`    /ppr    → Partial Pre-Rendering`);
-  console.log(`    /api/posts → JSON API (used by CSR)\n`);
-});
+// Exported so tests can mount the router on a random port.
+module.exports = router;
+
+if (require.main === module) {
+  const server = http.createServer(router);
+  server.listen(PORT, () => {
+    console.log(`\n  Server running at http://localhost:${PORT}`);
+    console.log(`\n  Routes:`);
+    console.log(`    /       → Home`);
+    console.log(`    /ssg    → Static Site Generation`);
+    console.log(`    /ssr    → Server-Side Rendering`);
+    console.log(`    /csr    → Client-Side Rendering`);
+    console.log(`    /isr    → Incremental Static Regeneration`);
+    console.log(`    /ppr    → Partial Pre-Rendering`);
+    console.log(`    /api/posts → JSON API (used by CSR)\n`);
+  });
+}
