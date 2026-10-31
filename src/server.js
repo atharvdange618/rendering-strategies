@@ -26,7 +26,7 @@ const handleISR = require("./strategies/isr");
 const handlePPR = require("./strategies/ppr");
 const handleStreamingSSR = require("./strategies/streaming-ssr");
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 const postsPath = path.join(__dirname, "../data/posts.json");
 
