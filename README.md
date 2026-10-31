@@ -2,6 +2,8 @@
 
 A from-first-principles implementation of all five major web rendering strategies (SSG, SSR, CSR, ISR, and PPR) built with zero frameworks, plus a streaming SSR route to compare against PPR. This project uses only Node.js's built-in `http` module to showcase the underlying mechanics of modern web rendering without framework magic.
 
+**Live demo:** [rendering.atharvdange.com](https://rendering.atharvdange.com)
+
 For a deep-dive walkthrough and analysis, check out the full [Case Study: Web Rendering Strategies](https://atharvdange.com/blog/rendering-strategies).
 
 ---
