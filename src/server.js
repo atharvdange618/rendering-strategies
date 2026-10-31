@@ -3,6 +3,7 @@
  *
  * Route map:
  *   GET /           → Home page (plain SSR, just for navigation)
+ *   GET /about      → What the site is and how to read each demo (plain SSR)
  *   GET /ssg        → Static Site Generation  (serves pre-built file from /dist)
  *   GET /ssr        → Server-Side Rendering   (generates HTML per request)
  *   GET /csr        → Client-Side Rendering   (serves empty shell + JS)
@@ -17,7 +18,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const { htmlShell, renderHomePage } = require("./templates");
+const { htmlShell, renderHomePage, renderAboutPage, ABOUT_STYLES } = require("./templates");
 
 const handleSSG = require("./strategies/ssg");
 const handleSSR = require("./strategies/ssr");
@@ -48,6 +49,10 @@ function router(req, res) {
   switch (pathname) {
     case "/":
       handleHome(req, res);
+      break;
+
+    case "/about":
+      handleAbout(req, res);
       break;
 
     case "/ssg":
@@ -94,6 +99,19 @@ function handleHome(req, res) {
     body: renderHomePage(),
     strategy: "SSR", // home page is server-rendered, no caching
     generatedAt: new Date().toISOString(),
+  });
+
+  res.writeHead(200, { "Content-Type": "text/html" });
+  res.end(html);
+}
+
+function handleAbout(req, res) {
+  const html = htmlShell({
+    title: "About",
+    body: renderAboutPage(),
+    strategy: "SSR",
+    generatedAt: new Date().toISOString(),
+    extraHead: ABOUT_STYLES,
   });
 
   res.writeHead(200, { "Content-Type": "text/html" });
@@ -170,6 +188,7 @@ if (require.main === module) {
     console.log(`\n  Server running at http://localhost:${PORT}`);
     console.log(`\n  Routes:`);
     console.log(`    /       → Home`);
+    console.log(`    /about  → About this site`);
     console.log(`    /ssg    → Static Site Generation`);
     console.log(`    /ssr    → Server-Side Rendering`);
     console.log(`    /csr    → Client-Side Rendering`);

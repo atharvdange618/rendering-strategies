@@ -215,3 +215,21 @@ describe("step 8: streaming SSR route", () => {
     assertResolverInsideBody(body);
   });
 });
+
+describe("about page and favicon", () => {
+  test("/about renders and is linked from the nav", async () => {
+    const res = await get("/about");
+    const body = await res.text();
+
+    assert.equal(res.status, 200);
+    assert.ok(body.includes("<title>About</title>"));
+    assert.ok(body.includes('<a href="/about" class="active">About</a>'));
+  });
+
+  test("every page links the SVG favicon", async () => {
+    for (const route of ["/", "/about", "/ssg", "/ssr", "/csr", "/isr"]) {
+      const body = await (await get(route)).text();
+      assert.ok(body.includes('<link rel="icon" type="image/svg+xml"'), `${route} has no favicon`);
+    }
+  });
+});

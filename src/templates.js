@@ -28,6 +28,19 @@
  * @param {string} [options.extraHead] - Optional extra tags for <head> (scripts, etc.)
  */
 
+// Five bars, one per strategy, in the badge colors. Inlined as a data URI so
+// every page (including the pre-built SSG and PPR files) carries it without
+// an extra route or request.
+const FAVICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<rect width="32" height="32" rx="7" fill="#0f172a"/>
+<rect x="6" y="5" width="20" height="3" rx="1.5" fill="#4ade80"/>
+<rect x="6" y="10.5" width="14" height="3" rx="1.5" fill="#60a5fa"/>
+<rect x="6" y="16" width="18" height="3" rx="1.5" fill="#c084fc"/>
+<rect x="6" y="21.5" width="10" height="3" rx="1.5" fill="#f59e0b"/>
+<rect x="6" y="27" width="16" height="3" rx="1.5" fill="#818cf8"/>
+</svg>`;
+const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(FAVICON_SVG)}`;
+
 function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
   const strategyColors = {
     SSG: "#4ade80",
@@ -46,6 +59,9 @@ function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
     if (title === "Rendering Strategies") {
       return path === "/" ? ' class="active"' : "";
     }
+    if (title === "About") {
+      return path === "/about" ? ' class="active"' : "";
+    }
     // Otherwise, match based on rendering strategy
     if (strategy === "SSG" && path === "/ssg") return ' class="active"';
     if (strategy === "SSR" && path === "/ssr") return ' class="active"';
@@ -62,6 +78,7 @@ function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${escapeHtml(title)}</title>
+  <link rel="icon" type="image/svg+xml" href="${FAVICON_HREF}" />
   ${extraHead}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -197,6 +214,7 @@ function htmlShell({ title, body, strategy, generatedAt, extraHead = "" }) {
       <a href="/isr"${getActiveClass("/isr")}>ISR</a>
       <a href="/ppr"${getActiveClass("/ppr")}>PPR</a>
       <a href="/streaming-ssr"${getActiveClass("/streaming-ssr")}>Streaming SSR</a>
+      <a href="/about"${getActiveClass("/about")}>About</a>
     </nav>
 
     <div class="strategy-banner">
@@ -344,6 +362,145 @@ function renderHomePage() {
     </p>
     <div style="display:grid; gap:1rem;">
       ${cards}
+    </div>`;
+}
+
+const ABOUT_STYLES = `<style>
+    .about h2 { font-size: 1.15rem; color: #f1f5f9; margin: 2.5rem 0 0.75rem; }
+    .about p, .about li { color: #94a3b8; font-size: 0.95rem; line-height: 1.7; }
+    .about p + p { margin-top: 0.75rem; }
+    .about ul { padding-left: 1.25rem; display: grid; gap: 0.4rem; }
+    .about a { color: #60a5fa; }
+    .about code {
+      background: #1e293b; border: 1px solid #334155; border-radius: 4px;
+      padding: 0.05rem 0.35rem; font-size: 0.85em; color: #e2e8f0;
+    }
+    .about pre {
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+      padding: 0.9rem 1rem; overflow-x: auto; margin-top: 0.75rem;
+      font-size: 0.85rem; color: #e2e8f0;
+    }
+    .try-list { display: grid; gap: 0.75rem; margin-top: 1rem; }
+    .try {
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+      padding: 1rem 1.25rem;
+    }
+    .try-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+    .try-badge {
+      color: #0f172a; font-weight: 700; font-size: 0.72rem;
+      padding: 0.15rem 0.5rem; border-radius: 4px; letter-spacing: 0.05em;
+    }
+    .try-head a { color: #f1f5f9; font-weight: 600; text-decoration: none; }
+    .try-head a:hover { text-decoration: underline; }
+    .try p { font-size: 0.88rem; }
+    .try strong { color: #e2e8f0; font-weight: 600; }
+  </style>`;
+
+/**
+ * Renders the About page: what the site is and how to read each demo.
+ */
+function renderAboutPage() {
+  const tries = [
+    {
+      name: "SSG", path: "/ssg", color: "#4ade80",
+      action: "Refresh as often as you like.",
+      result: "The timestamp never moves. The HTML was written once, when the site was last deployed, and the server just reads the file.",
+    },
+    {
+      name: "SSR", path: "/ssr", color: "#60a5fa",
+      action: "Refresh.",
+      result: "A new timestamp every time. The server builds the page from scratch for each request.",
+    },
+    {
+      name: "CSR", path: "/csr", color: "#c084fc",
+      action: "Open View Source.",
+      result: "The post list isn't in the HTML at all. Your browser runs a script, fetches <code>/api/posts</code> and builds the list itself.",
+    },
+    {
+      name: "ISR", path: "/isr", color: "#f59e0b",
+      action: "Refresh a few times over about 20 seconds.",
+      result: "The timestamp holds for 10 seconds. The first refresh after that still gets the old page but starts a rebuild in the background; the next one gets the new page. The <code>X-ISR-Status</code> response header tells you which case you hit.",
+    },
+    {
+      name: "PPR", path: "/ppr", color: "#818cf8",
+      action: "Refresh and watch the Trending box.",
+      result: "The page appears at once with a frozen timestamp. Two seconds later the box fills in with a time that changes on every request. Both parts come down in one response.",
+    },
+    {
+      name: "STREAMING", path: "/streaming-ssr", color: "#38bdf8",
+      action: "Open it next to PPR and refresh both.",
+      result: "Same delivery as PPR, but here both timestamps change, because the server renders the shell for each request instead of reading it from disk.",
+    },
+  ];
+
+  const tryCards = tries
+    .map(
+      (t) => `
+      <div class="try">
+        <div class="try-head">
+          <span class="try-badge" style="background:${t.color};">${t.name}</span>
+          <a href="${t.path}">${t.path}</a>
+        </div>
+        <p><strong>${t.action}</strong> ${t.result}</p>
+      </div>`,
+    )
+    .join("\n");
+
+  return `
+    <div class="about">
+      <h1 style="margin-bottom:0.5rem;">About this site</h1>
+      <p class="subtitle" style="margin-bottom:0;">
+        One list of blog posts, rendered six different ways, so you can see how each
+        rendering strategy behaves instead of reading about it.
+      </p>
+
+      <h2>What it is</h2>
+      <p>
+        This is the live demo for my case study on web rendering strategies. Every page
+        shows the same five posts. What changes is where and when the HTML gets made:
+        on the server or in your browser, at build time or at request time.
+      </p>
+      <p>
+        There is no framework here. The server runs on Node's built-in <code>http</code>
+        module with zero npm dependencies, so each strategy is a short file you can read
+        from top to bottom.
+      </p>
+
+      <h2>How to read a page</h2>
+      <p>
+        Every page has a colored badge naming its strategy and an
+        <strong style="color:#e2e8f0;">HTML generated at</strong> timestamp written into
+        the HTML. That timestamp tells you when the server made the page. Whether it
+        changes on refresh, and when, is the clearest difference between the strategies.
+      </p>
+
+      <h2>What to try</h2>
+      <div class="try-list">
+        ${tryCards}
+      </div>
+
+      <h2>Watch the stream yourself</h2>
+      <p>
+        The PPR and streaming pages send their HTML in two chunks over one connection.
+        A browser hides that, but <code>curl</code> shows it: the page prints, pauses
+        for two seconds, then the rest arrives.
+      </p>
+      <pre>curl -N https://rendering.atharvdange.com/ppr</pre>
+
+      <h2>What's under the hood</h2>
+      <ul>
+        <li>One shared template file. Every strategy calls the same render functions; only the time and place differ.</li>
+        <li>ISR writes its cache to a temp file and renames it into place, so a reader never sees a half-written page. Only one rebuild runs at a time.</li>
+        <li>PPR and streaming SSR use chunked transfer encoding, and send <code>X-Accel-Buffering: no</code> so nginx passes each chunk through as it comes.</li>
+        <li>The Trending box is fake data with a two-second delay, standing in for a slow API.</li>
+      </ul>
+
+      <h2>Read more</h2>
+      <ul>
+        <li><a href="https://atharvdange.com/blog/rendering-strategies">The case study</a>, which walks through each strategy and the bugs I fixed along the way.</li>
+        <li><a href="https://github.com/atharvdange618/rendering-strategies">Source on GitHub</a>.</li>
+        <li>Built by Atharv Dange: <a href="https://x.com/atharvdangedev">@atharvdangedev</a> on X, <a href="https://github.com/atharvdange618">atharvdange618</a> on GitHub.</li>
+      </ul>
     </div>`;
 }
 
@@ -599,6 +756,8 @@ module.exports = {
   htmlShell,
   renderPostList,
   renderHomePage,
+  renderAboutPage,
+  ABOUT_STYLES,
   escapeHtml,
   buildPPRShell,
   buildStreamingSSRShell,
